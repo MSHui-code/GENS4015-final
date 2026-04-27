@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mercatoria Incident Archive — Operator Terminal</title>
+<style>
+  /* ============================================================
+     MERCATORIA INCIDENT INVESTIGATION ARCHIVE
+     A creative-critical artefact for GENS4015
+     Based on Iain M. Banks's The Algebraist (2004)
+     ============================================================ */
+
+  :root {
+    --paper: #ede4d3;
+    --ink: #1f1a14;
+    --dim: #6b5e4a;
+    --warn: #a83829;
+    --wrap-bg: #d6c9ad;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--wrap-bg);
+    min-height: 100vh;
+    font-family: ui-monospace, "SF Mono", Menlo, "Courier New", monospace;
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  #msa-frame {
+    background: var(--paper);
+    color: var(--ink);
+    padding: 22px 28px 50px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+    width: 100%;
+    max-width: 760px;
+    min-height: 760px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  }
+
+  #msa-stamp {
+    position: absolute;
+    top: 88px;
+    right: 28px;
+    transform: rotate(-9deg);
+    border: 2.5px solid var(--warn);
+    color: var(--warn);
+    padding: 3px 11px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    opacity: 0.32;
+    pointer-events: none;
+  }
+
+  .msa-header {
+    border-top: 2px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding: 6px 0;
+  }
+
+  .msa-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+
+  .msa-header-row span:first-child { font-weight: 700; }
+
+  #msa-sub {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9.5px;
+    color: var(--dim);
+    padding: 4px 0;
+    letter-spacing: 0.08em;
+  }
+
+  #msa-content { margin-top: 8px; }
+
+  #msa-footer {
+    position: absolute;
+    bottom: 14px;
+    left: 28px;
+    right: 28px;
+    border-top: 1px solid var(--dim);
+    padding-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+  }
+
+  @keyframes msaFadeIn {
+    from { opacity: 0; transform: translateY(-3px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .msa-fade-in { animation: msaFadeIn 0.7s ease forwards; }
+
+  /* ============================================================
+     COVER / LOADING SCREEN
+     A full-bleed schematic of the Ulubis North Portal that appears
+     before the operator terminal. Functions as a title card and
+     a tonal preview. Click anywhere to enter the archive.
+     Once dismissed it does not reappear, even when the operator
+     loop restarts — entering the system is a one-time ritual.
+     ============================================================ */
+  #cover-screen {
+    position: fixed;
+    inset: 0;
+    background: #1a1a1a;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.9s ease;
+  }
+  #cover-screen.fading { opacity: 0; pointer-events: none; }
+
+  #cover-image {
+    max-width: 100%;
+    max-height: 100vh;
+    width: auto;
+    height: auto;
+    display: block;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+
+  #cover-prompt {
+    position: fixed;
+    bottom: 30px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #c8b88a;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: coverPromptBlink 2.4s ease-in-out 1.2s infinite;
+    pointer-events: none;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  }
+
+  @keyframes coverPromptBlink {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+  }
+
+  #msa-frame { opacity: 0; transition: opacity 0.6s ease 0.3s; }
+  #msa-frame.revealed { opacity: 1; }
+
+  button { font-family: inherit; }
+
+  input::placeholder { color: var(--dim); opacity: 0.6; }
+</style>
+</head>
+<body>
+
+<div id="cover-screen">
+  <img id="cover-image" src="cover.jpg" alt="Mercatoria Arteria Network — Ulubis North Portal classified schematic" />
+  <div id="cover-prompt">▸ click to access archive</div>
+</div>
+
+<div id="msa-frame">
+  <div id="msa-stamp">CLASSIFIED</div>
+
+  <div class="msa-header">
+    <div class="msa-header-row">
+      <span>MERCATORIA · INCIDENT INVESTIGATION ARCHIVE</span>
+      <span>ULUBIS / TIER vii</span>
+    </div>
+  </div>
+
+  <div id="msa-sub"></div>
+  <div id="msa-content"></div>
+  <div id="msa-footer"></div>
+</div>
+
+<script>
+(function(){
+  const sub = document.getElementById('msa-sub');
+  const content = document.getElementById('msa-content');
+  const footer = document.getElementById('msa-footer');
+  const stamp = document.getElementById('msa-stamp');
+  const dim = '#6b5e4a';
+  const ink = '#1f1a14';
+  const warn = '#a83829';
+
+  let sessionFlagged = false;
+  let brightAscVisited = false;
+  let pendingNewFiles = false;
+  // After the first loop completes (operator was flagged and acknowledged),
+  // ULB-████ becomes accessible — but it does not reveal a Mercatoria
+  // tier-5 file. It reveals the Dweller Open Archive: a parallel record
+  // kept by a species that has no concept of clearance. The "truth only"
+  // tier was always meaningless from outside the Mercatoria worldview.
+  let loopCount = 0;
+
+  function redactBar(w){
+    return '<span style="background:' + ink + ';height:13px;width:' + w + 'px;display:inline-block;vertical-align:middle;"></span>';
+  }
+  function dataRow(label, value){
+    return '<span style="color:' + dim + '; font-size: 10px; letter-spacing: 0.1em;">' + label + '</span><span>' + value + '</span>';
+  }
+  function getOp(){
+    return sessionFlagged
+      ? { name: 'ferent-osu-3309', sess: '4112-Ε' }
+      : { name: 'chel-jorn-7714', sess: '4112-Δ' };
+  }
+
+  // ============================================================
+  // BRIEFING SCREEN — entry point. Establishes operator identity,
+  // shift, and the surveillance frame ("all queries are recorded").
+  // ============================================================
+  function renderBriefing(){
+    const op = getOp();
+    sub.innerHTML =
+      '<span>' + (sessionFlagged ? 'new session · authenticating' : 'incoming session · authenticating') + '</span>' +
+      '<span>cycle ' + op.sess + ' · 04:17:22 local</span>';
+
+    content.innerHTML =
+      '<div style="text-align:center; margin: 56px auto 0; max-width: 480px;">' +
+        '<div style="font-size: 14px; letter-spacing: 0.18em; font-weight: 700; margin-bottom: 4px;">▸ MERCATORIA NETWORK</div>' +
+        '<div style="font-size: 10px; color:' + dim + '; letter-spacing: 0.1em; font-style: italic;">— establishing handshake —</div>' +
+        '<div style="margin: 38px 0 0; text-align: left;">' +
+          '<div style="display:grid; grid-template-columns: 165px 1fr; row-gap: 10px; column-gap: 14px; font-size: 12px;">' +
+            '<span style="color:' + dim + '; font-size: 10px; letter-spacing: 0.1em;">▸ identity verified</span><span>operator ' + op.name + '</span>' +
+            '<span style="color:' + dim + '; font-size: 10px; letter-spacing: 0.1em;">▸ shift assignment</span><span>incident review · cycle ' + op.sess + '</span>' +
+            '<span style="color:' + dim + '; font-size: 10px; letter-spacing: 0.1em;">▸ access granted</span><span>tier 2 — MCT-INTERNAL</span>' +
+            '<span style="color:' + dim + '; font-size: 10px; letter-spacing: 0.1em;">▸ caseload</span><span>8 files assigned by dispatch</span>' +
+            (sessionFlagged ? '<span style="color:' + warn + '; font-size: 10px; letter-spacing: 0.1em;">▸ note</span><span style="color:' + warn + '; font-style: italic;">previous operator reassigned</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-top: 30px; border-top: 1px dashed ' + dim + '; border-bottom: 1px dashed ' + dim + '; padding: 12px 8px; font-size: 10.5px; line-height: 1.65; color:' + dim + ';">' +
+          '<span style="color:' + ink + '; font-weight: 700; letter-spacing: 0.1em;">NOTICE —</span> all queries to the incident archive are recorded under mercatoria edict 9.114-α. operators are reminded that the archive is provided for case-handling purposes only. unauthorised access attempts will be referred to the shrievalty ocula.' +
+        '</div>' +
+        '<div style="margin-top: 32px;">' +
+          '<button id="enter-btn" style="background: transparent; border: 2px solid ' + ink + '; padding: 11px 28px; font-family: inherit; font-size: 12px; letter-spacing: 0.18em; color:' + ink + '; cursor: pointer; font-weight: 700; transition: background 0.2s, color 0.2s;">ENTER ARCHIVE  ▸</button>' +
+        '</div>' +
+        '<div style="margin-top: 16px; font-size: 9px; color:' + dim + '; letter-spacing: 0.06em; font-style: italic;">by entering you accept that your session will be recorded</div>' +
+      '</div>';
+
+    footer.innerHTML =
+      '<span>mercatoria network · gateway ' + op.sess + '</span>' +
+      '<span>' + (sessionFlagged ? 'previous session: terminated' : 'session not yet committed to log') + '</span>';
+
+    const btn = document.getElementById('enter-btn');
+    btn.addEventListener('mouseenter', function(){ btn.style.background = ink; btn.style.color = '#ede4d3'; });
+    btn.addEventListener('mouseleave', function(){ btn.style.background = 'transparent'; btn.style.color = ink; });
+    btn.addEventListener('click', renderList);
+  }
+
+  // ============================================================
+  // CASE DATA — 10 cases total. Initially 8 visible to the user;
+  // the last 2 (ULB-████ and ULB-9612) are gated behind first
+  // visit to ULB-9558 "Bright Ascendancy".
+  // Categories:
+  //   - Mundane engineering failures (4): provide a baseline
+  //   - Real relativistic anomalies (3): embody course content
+  //     (Week 3 V1 spacetime relativity + Week 8 V1 mission failures)
+  //   - The cover-up case (Bright Ascendancy)
+  //   - The unreachable redacted case (ULB-████)
+  //   - The breadcrumb case (Patient Cartographer)
+  // ============================================================
+  const cases = [
+    { id: 'ULB-7416', vessel: '"Modest Returns"',          filed: '04.6.07 / 9241', status: 'CLOSED',          statusColor: dim,  clearance: 'public',       flag: '—' },
+    { id: 'ULB-7723', vessel: '"Resplendent Recurrence"',  filed: '14.7.07 / 9241', status: 'VANISHED',        statusColor: warn, clearance: 'public',       flag: '—' },
+    { id: 'ULB-8102', vessel: '"Ninefold Patience"',       filed: '23.9.07 / 9241', status: 'CLOSED',          statusColor: dim,  clearance: 'public',       flag: '—' },
+    { id: 'ULB-8841', vessel: '"Inadvertent Entanglement"',filed: '02.11.07 / 9241',status: 'INVESTIGATING',   statusColor: ink,  clearance: 'mct internal', flag: '—' },
+    { id: 'ULB-9012', vessel: '"Temporal Drift"',          filed: '— / 9194',       status: 'CREW DETAINED',   statusColor: ink,  clearance: 'restricted',   clearanceColor: warn, flag: 'T+47y',     flagColor: warn },
+    { id: 'ULB-9217', vessel: '"Forever Forward"',         filed: '— / 8941',       status: 'ACTIVE',          statusColor: ink,  clearance: 'mct internal', flag: 'γ=4.31',    flagColor: warn },
+    { id: 'ULB-9341', vessel: '"Quaestor\'s Margin"',      filed: '— / 9229',       status: 'GHOST SIGNAL',    statusColor: ink,  clearance: 'mct internal', flag: '+12y echo', flagColor: warn },
+    { id: 'ULB-9558', vessel: '"Bright Ascendancy" · 847 souls', filed: '22.3.07 / 9241', status: 'CLOSED — failure', statusColor: dim, clearance: 'public', flag: '847', flagColor: warn },
+    { isRedacted: true, clearance: 'truth only', clearanceColor: warn },
+    { id: 'ULB-9612', vessel: '"Patient Cartographer"',    filed: '11.1.07 / 9241', status: 'PENDING REVIEW',  statusColor: ink,  clearance: 'mct internal', flag: '—' }
+  ];
+
+  // ============================================================
+  // ARCHIVE LIST — the central queue. After Bright Ascendancy is
+  // visited, two more files are pushed into the queue with a
+  // diegetic "cross-referenced from your last access" notice.
+  // ============================================================
+  function renderList(){
+    const op = getOp();
+    const visibleCases = brightAscVisited ? cases : cases.slice(0, 8);
+    const showNotif = pendingNewFiles;
+    pendingNewFiles = false;
+
+    sub.innerHTML =
+      '<span>query terminal · session ' + op.sess + ' · op ' + op.name + '</span>' +
+      '<span>tier 2 — MCT-INTERNAL</span>';
+
+    let html =
+      '<div style="display: flex; justify-content: space-between; align-items: baseline; margin: 12px 0 6px; padding-bottom: 8px; border-bottom: 1px solid ' + ink + ';">' +
+        '<span style="font-size: 11px; letter-spacing: 0.12em; font-weight: 700;">▸ YOUR REVIEW QUEUE</span>' +
+        '<span style="font-size: 9.5px; color:' + dim + '; letter-spacing: 0.08em;">cycle ' + op.sess + ' · ' + visibleCases.length + ' cases assigned by dispatch</span>' +
+      '</div>';
+
+    if (showNotif){
+      html +=
+        '<div class="msa-fade-in" style="margin: 8px 0 12px; padding: 8px 12px; border: 1px dashed ' + warn + '; background: rgba(168,56,41,0.05); font-size: 10.5px; color:' + warn + '; letter-spacing: 0.06em;">▸ 2 files added to your queue · cross-referenced from your last access</div>';
+    }
+
+    html +=
+      '<div style="margin: 10px 0 12px; display: flex; gap: 10px; align-items: baseline;">' +
+        '<span style="font-size: 11px; letter-spacing: 0.12em; color:' + dim + ';">QUERY ›</span>' +
+        '<input type="text" placeholder="vessel name, case ID, or anomaly class" style="flex: 1; background: transparent; border: none; border-bottom: 1px dashed ' + ink + '; padding: 5px 2px; font-family: inherit; font-size: 13px; color:' + ink + '; outline: none;" />' +
+      '</div>' +
+      '<div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 18px; font-size: 9.5px; letter-spacing: 0.1em;">' +
+        '<span style="border: 1px solid ' + ink + '; padding: 3px 10px; background:' + ink + '; color:#ede4d3;">QUEUE · ' + visibleCases.length + '</span>' +
+        '<span style="border: 1px solid ' + dim + '; padding: 3px 10px; color:' + dim + ';">VANISHED</span>' +
+        '<span style="border: 1px solid ' + dim + '; padding: 3px 10px; color:' + dim + ';">RECOVERED LATE</span>' +
+        '<span style="border: 1px solid ' + dim + '; padding: 3px 10px; color:' + dim + ';">TIME ANOMALY</span>' +
+        '<span style="border: 1px solid ' + warn + '; padding: 3px 10px; color:' + warn + ';">RESTRICTED · 847</span>' +
+      '</div>' +
+      '<div style="display: grid; grid-template-columns: 95px 1fr 110px 95px 75px; gap: 10px; padding: 6px 0; border-bottom: 1.5px solid ' + ink + '; font-size: 9.5px; letter-spacing: 0.1em; color:' + dim + ';">' +
+        '<span>CASE ID</span><span>VESSEL</span><span>STATUS</span><span>FLAG</span><span style="text-align:right;">CLEAR</span>' +
+      '</div>' +
+      '<div id="case-list"></div>' +
+      '<div style="margin-top: 14px; font-size: 10px; color:' + dim + '; font-style: italic; letter-spacing: 0.04em;">↳ click any unrestricted case file to open the report</div>';
+
+    content.innerHTML = html;
+
+    footer.innerHTML =
+      '<span>archive sealed · mercatoria edict 9.114-α</span>' +
+      '<span>' + visibleCases.length + ' of 12,847 records assigned at tier 2</span>';
+
+    const list = document.getElementById('case-list');
+    list.innerHTML = visibleCases.map(function(c, idx){
+      const cClr = c.clearanceColor || dim;
+      const isNew = showNotif && idx >= 8;
+      const fadeClass = isNew ? ' msa-fade-in' : '';
+      if (c.isRedacted){
+        // First loop: standard redacted, non-clickable. The unreachable case.
+        // Second loop: the same row reveals itself to be a different archive
+        // entirely. The text is no longer redacted; the clearance is no longer
+        // gated. The change happens silently — no animation, no notification.
+        // A second-loop reviewer who is paying attention will notice.
+        if (loopCount >= 1){
+          return '<div class="dweller-row" style="display: grid; grid-template-columns: 95px 1fr 110px 95px 75px; gap: 10px; padding: 11px 0; border-bottom: 1px dashed ' + dim + '; cursor: pointer; align-items: baseline; transition: background 0.15s;">' +
+            '<span style="font-size: 11px;">—</span>' +
+            '<span style="font-size: 12px; font-style: italic;">Dweller Attestation Archive</span>' +
+            '<span style="font-size: 10px; color:' + dim + '; letter-spacing: 0.06em; font-style: italic;">open record</span>' +
+            '<span style="font-size: 10px; color:' + dim + ';">—</span>' +
+            '<span style="font-size: 9px; color:' + dim + '; text-align:right; letter-spacing: 0.1em; font-style: italic;">all may read</span>' +
+          '</div>';
+        }
+        return '<div class="' + fadeClass.trim() + '" style="display: grid; grid-template-columns: 95px 1fr 110px 95px 75px; gap: 10px; padding: 11px 0; border-bottom: 1px dashed ' + dim + '; cursor: not-allowed; align-items: center; opacity: 0.7;">' +
+          '<span style="font-size: 11px;">ULB-████</span>' +
+          '<span>' + redactBar(200) + '</span>' +
+          '<span>' + redactBar(80) + '</span>' +
+          '<span>' + redactBar(60) + '</span>' +
+          '<span style="font-size: 9px; color:' + cClr + '; text-align:right; letter-spacing: 0.1em;">' + c.clearance + '</span>' +
+        '</div>';
+      }
+      const flagClr = c.flagColor || dim;
+      return '<div class="case-row' + fadeClass + '" data-id="' + c.id + '" style="display: grid; grid-template-columns: 95px 1fr 110px 95px 75px; gap: 10px; padding: 11px 0; border-bottom: 1px dashed ' + dim + '; cursor: pointer; align-items: baseline; transition: background 0.15s;">' +
+        '<span style="font-size: 11px;">' + c.id + '</span>' +
+        '<span style="font-size: 12px;">' + c.vessel + '</span>' +
+        '<span style="font-size: 10px; color:' + c.statusColor + '; letter-spacing: 0.06em;">' + c.status + '</span>' +
+        '<span style="font-size: 10px; color:' + flagClr + ';">' + c.flag + '</span>' +
+        '<span style="font-size: 9px; color:' + cClr + '; text-align:right; letter-spacing: 0.1em;">' + c.clearance + '</span>' +
+      '</div>';
+    }).join('');
+
+    document.querySelectorAll('.case-row').forEach(function(row){
+      row.addEventListener('mouseenter', function(){ row.style.background = 'rgba(31,26,20,0.06)'; });
+      row.addEventListener('mouseleave', function(){ row.style.background = 'transparent'; });
+      row.addEventListener('click', function(){ renderDetail(row.dataset.id); });
+    });
+
+    // Dweller archive entry (only present in second loop). Hover gives
+    // the same subtle highlight as a regular case row, but the click
+    // takes the user out of the Mercatoria UI entirely — into a
+    // visually different document that does not belong to the system
+    // they have been working inside.
+    document.querySelectorAll('.dweller-row').forEach(function(row){
+      row.addEventListener('mouseenter', function(){ row.style.background = 'rgba(31,26,20,0.06)'; });
+      row.addEventListener('mouseleave', function(){ row.style.background = 'transparent'; });
+      row.addEventListener('click', renderDwellerArchive);
+    });
+  }
+
+  // ============================================================
+  // CASE DETAIL DISPATCHER
+  // ============================================================
+  function renderDetail(id, mode){
+    const op = getOp();
+    sub.innerHTML =
+      '<span>viewing file · session ' + op.sess + ' · op ' + op.name + '</span>' +
+      '<span>tier 2 — MCT-INTERNAL</span>';
+    footer.innerHTML =
+      '<span>file ' + id + ' · access logged</span>' +
+      '<span>return to archive when complete</span>';
+
+    if (id === 'ULB-9558'){
+      if (!brightAscVisited){
+        brightAscVisited = true;
+        pendingNewFiles = true;
+      }
+      content.innerHTML = renderBrightAscendancy();
+    } else if (id === 'ULB-9012') content.innerHTML = renderTemporalDrift(mode === 'public');
+    else if (id === 'ULB-9217')   content.innerHTML = renderForeverForward();
+    else if (id === 'ULB-9341')   content.innerHTML = renderQuaestorsMargin();
+    else if (id === 'ULB-9612')   content.innerHTML = renderPatientCartographer();
+    else                          content.innerHTML = renderPlaceholder(id);
+
+    bindHandlers();
+  }
+
+  // Mundane cases — placeholder, fully diegetic copy.
+  // Their value is the contrast they create in the queue list,
+  // not detail content. Kept intentionally short.
+  function renderPlaceholder(id){
+    return '' +
+      '<button class="back-btn" style="background: transparent; border: 1px solid ' + ink + '; padding: 4px 10px; font-family: inherit; font-size: 10px; letter-spacing: 0.1em; color:' + ink + '; cursor: pointer; margin: 14px 0 16px;">← back to archive</button>' +
+      '<div style="margin-top: 80px; text-align: center; color:' + dim + '; font-size: 12px; font-style: italic; line-height: 1.7;">' +
+        'file ' + id + ' · case officer compiling report.<br/>' +
+        'check back next administrative cycle.' +
+      '</div>';
+  }
+
+  // ============================================================
+  // ULB-9558 BRIGHT ASCENDANCY — the cover-up case.
+  // The hover-reveal on DWELLER ATTESTATION is the user's first
+  // moment of "decoding" the system.
+  // ============================================================
+  function renderBrightAscendancy(){
+    return '' +
+      '<button class="back-btn" style="background: transparent; border: 1px solid ' + ink + '; padding: 4px 10px; font-family: inherit; font-size: 10px; letter-spacing: 0.1em; color:' + ink + '; cursor: pointer; margin: 14px 0 12px;">← back to archive</button>' +
+      '<div style="border-top: 1.5px solid ' + ink + '; padding-top: 10px; margin-bottom: 14px;">' +
+        '<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 4px;">' +
+          '<span>FILE ULB-9558</span><span>opened 22.3.07-9241 · last touched 03.4.07-9241</span>' +
+        '</div>' +
+        '<div style="font-size: 18px; font-weight: 500; letter-spacing: 0.04em;">"Bright Ascendancy"</div>' +
+        '<div style="font-size: 11px; color:' + dim + '; letter-spacing: 0.05em;">tier-ii passenger liner · 847 souls aboard · hull intact at departure</div>' +
+      '</div>' +
+      '<div style="display: grid; grid-template-columns: 175px 1fr; row-gap: 10px; column-gap: 18px; font-size: 12px; align-items: baseline;">' +
+        dataRow('REGISTRATION', 'MCT-PASS-9558-IV') +
+        dataRow('DEPARTURE', 'Ulubis Portal North · 22.3.07-9241 / 04:18 local') +
+        dataRow('DESTINATION', 'Boogeytown Portal · system 4458-Aleph') +
+        dataRow('PORTAL TRANSIT LOG', redactBar(180) + ' <span style="font-size: 10px; color:' + dim + '; margin-left: 6px;">— 3 lines withheld</span>') +
+        dataRow('LAST KNOWN POSITION', redactBar(140) + ' (sector ' + redactBar(32) + ')') +
+        dataRow('ANOMALY CLASSIFICATION', redactBar(230)) +
+        dataRow('TIME DELTA AT SIGNAL LOSS', '<span style="color:' + warn + ';">+47.2 years (theoretical · per gravitational dilation model)</span>') +
+        dataRow('DWELLER ATTESTATION', '<span class="reveal-redaction" style="background:' + ink + '; color:' + ink + '; padding: 2px 8px; cursor: help; transition: background 0.45s ease, color 0.45s ease; font-style: italic; font-size: 11.5px; line-height: 1.4; display: inline-block; max-width: 380px;">"...witnessed the light fold inward... the vessel did not exit the portal..."</span>') +
+        dataRow('INVESTIGATING OFFICER', redactBar(110)) +
+      '</div>' +
+      '<div style="margin-top: 22px; border-top: 1.5px solid ' + ink + '; padding-top: 12px;">' +
+        '<div style="font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 6px;">OFFICIAL FINDING</div>' +
+        '<div style="font-size: 13px; font-weight: 500;">MECHANICAL FAILURE · case closed</div>' +
+        '<div style="font-size: 11px; color:' + dim + '; margin-top: 4px; font-style: italic;">no debris recovered. no further public inquiry authorised.</div>' +
+      '</div>' +
+      '<div style="margin-top: 20px; text-align: right; font-size: 9.5px; color:' + warn + '; letter-spacing: 0.08em; font-style: italic;">↑ try hovering the dweller attestation</div>';
+  }
+
+  // ============================================================
+  // ULB-9012 TEMPORAL DRIFT — gravitational time dilation case.
+  // Direct course-material reference: Week 3 V1 (spacetime).
+  // Toggle between internal record and public-facing record
+  // makes the institutional double-language visceral.
+  // ============================================================
+  function renderTemporalDrift(isPublic){
+    if (isPublic){
+      return '' +
+        '<button class="back-btn" style="background: transparent; border: 1px solid ' + ink + '; padding: 4px 10px; font-family: inherit; font-size: 10px; letter-spacing: 0.1em; color:' + ink + '; cursor: pointer; margin: 14px 0 12px;">← back to archive</button>' +
+        '<div style="margin-top: 30px; padding: 28px 24px; border: 1.5px solid ' + dim + '; background: rgba(255,255,255,0.25);">' +
+          '<div style="font-size: 9.5px; letter-spacing: 0.18em; color:' + dim + '; margin-bottom: 14px;">PUBLIC ARCHIVE · OPEN RECORD</div>' +
+          '<div style="font-size: 13px; letter-spacing: 0.04em; margin-bottom: 6px;">CASE ULB-9012</div>' +
+          '<div style="font-size: 16px; font-weight: 500; margin-bottom: 4px;">"Temporal Drift"</div>' +
+          '<div style="font-size: 11px; color:' + dim + '; margin-bottom: 18px;">survey vessel</div>' +
+          '<div style="font-size: 11px; letter-spacing: 0.08em;">status: <span style="color:' + warn + '; font-weight: 700;">VANISHED</span></div>' +
+          '<div style="font-size: 11px; color:' + dim + '; margin-top: 4px;">no further information available</div>' +
+          '<div style="margin-top: 22px; padding-top: 12px; border-top: 1px dashed ' + dim + '; font-size: 9.5px; color:' + dim + '; font-style: italic;">— record last updated 23.4.07-9194 · 47 years ago —</div>' +
+        '</div>' +
+        '<div style="margin-top: 18px;">' +
+          '<button class="td-internal" style="background: transparent; border: 1px solid ' + ink + '; padding: 6px 14px; font-family: inherit; font-size: 10px; letter-spacing: 0.1em; color:' + ink + '; cursor: pointer;">▸ return to internal record</button>' +
+        '</div>' +
+        '<div style="margin-top: 18px; font-size: 10px; color:' + warn + '; letter-spacing: 0.06em; font-style: italic; line-height: 1.6;">this is what every citizen of ulubis sees when they look up the case. the vessel returned 47 years ago. they are not told.</div>';
+    }
+    return '' +
+      '<button class="back-btn" style="background: transparent; border: 1px solid ' + ink + '; padding: 4px 10px; font-family: inherit; font-size: 10px; letter-spacing: 0.1em; color:' + ink + '; cursor: pointer; margin: 14px 0 12px;">← back to archive</button>' +
+      '<div style="border-top: 1.5px solid ' + ink + '; padding-top: 10px; margin-bottom: 14px;">' +
+        '<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 4px;">' +
+          '<span>FILE ULB-9012</span><span>opened 23.4.07-9194 · returned 02.5.07-9241</span>' +
+        '</div>' +
+        '<div style="font-size: 18px; font-weight: 500; letter-spacing: 0.04em;">"Temporal Drift"</div>' +
+        '<div style="font-size: 11px; color:' + dim + '; letter-spacing: 0.05em;">long-range gravitational survey vessel · 4 souls aboard · status: contained</div>' +
+      '</div>' +
+      '<div style="display: grid; grid-template-columns: 200px 1fr; row-gap: 9px; column-gap: 18px; font-size: 12px; align-items: baseline;">' +
+        dataRow('REGISTRATION', 'MCT-SURV-9012-II') +
+        dataRow('ORIGINATING DEPARTURE', 'Ulubis Portal North · 14.4.07-9194') +
+        dataRow('ORIGINAL MISSION', 'gravitational mapping · binary system 4892-Theta-α/β') +
+        dataRow('PLANNED DURATION', '8.4 months') +
+        dataRow('ELAPSED · external frame', '<span style="color:' + warn + ';">47 years, 4 months</span>') +
+        dataRow('ELAPSED · crew subjective', '5.2 months · consistent with mission plan') +
+        dataRow('ANOMALY CLASS', 'gravitational time dilation · general relativity') +
+        dataRow('LORENTZ-EQUIVALENT', '<span style="color:' + warn + ';">γ ≈ 109 at perigee</span>') +
+        dataRow('FIELD STRENGTH', '0.91 r_s · schwarzschild radius proximity') +
+        dataRow('VESSEL CONDITION', 'nominal · all systems within tolerance') +
+        dataRow('CREW PHYSIOLOGICAL STATUS', 'nominal · no measurable ageing acceleration') +
+        dataRow('CREW LOCATION', redactBar(140) + ' reintegration facility') +
+        dataRow('CREW STATEMENT', '<span style="font-style: italic;">withheld pending reintegration assessment</span>') +
+        dataRow('INVESTIGATING AUTHORITY', 'shrievalty ocula') +
+      '</div>' +
+      '<div style="margin-top: 22px; border-top: 1.5px solid ' + ink + '; padding-top: 12px;">' +
+        '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">' +
+          '<div>' +
+            '<div style="font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 6px;">INTERNAL FINDING</div>' +
+            '<div style="font-size: 12px; font-weight: 500; line-height: 1.5;">transit consistent with theoretical prediction. crew authentic. no anomaly beyond expected gravitational dilation.</div>' +
+          '</div>' +
+          '<div>' +
+            '<div style="font-size: 10px; letter-spacing: 0.1em; color:' + warn + '; margin-bottom: 6px;">PUBLIC ADVISORY</div>' +
+            '<div style="font-size: 12px; font-weight: 500; line-height: 1.5;">vessel remains listed as <span style="color:' + warn + ';">VANISHED</span> on the public registry.</div>' +
+            '<div style="font-size: 10.5px; color:' + dim + '; margin-top: 6px; font-style: italic;">reintegration is contingent on assessment of accumulated knowledge.</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-top: 22px; padding: 10px 14px; border: 1px dashed ' + warn + '; display: inline-block;">' +
+        '<button class="td-public" style="background: transparent; border: 1px solid ' + warn + '; padding: 6px 14px; font-family: inherit; font-size: 10px; letter-spacing: 0.1em; color:' + warn + '; cursor: pointer;">▸ view public-facing record</button>' +
+        '<span style="font-size: 9.5px; color:' + dim + '; margin-left: 12px; font-style: italic;">see what citizens are told</span>' +
+      '</div>';
+  }
+
+  // ============================================================
+  // ULB-9217 FOREVER FORWARD — special relativity + institutional
+  // inertia. Lorentz factor γ=4.31. Mission outlasts originator.
+  // ============================================================
+  function renderForeverForward(){
+    return '' +
+      '<button class="back-btn" style="background: transparent; border: 1px solid ' + ink + '; padding: 4px 10px; font-family: inherit; font-size: 10px; letter-spacing: 0.1em; color:' + ink + '; cursor: pointer; margin: 14px 0 12px;">← back to archive</button>' +
+      '<div style="border-top: 1.5px solid ' + ink + '; padding-top: 10px; margin-bottom: 14px;">' +
+        '<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 4px;">' +
+          '<span>FILE ULB-9217</span><span>opened 11.2.07-8941 · still active</span>' +
+        '</div>' +
+        '<div style="font-size: 18px; font-weight: 500; letter-spacing: 0.04em;">"Forever Forward"</div>' +
+        '<div style="font-size: 11px; color:' + dim + '; letter-spacing: 0.05em;">long-range autonomous probe · no crew · status: operating nominally</div>' +
+      '</div>' +
+      '<div style="display: grid; grid-template-columns: 200px 1fr; row-gap: 9px; column-gap: 18px; font-size: 12px; align-items: baseline;">' +
+        dataRow('REGISTRATION', 'MCT-PROB-9217-I') +
+        dataRow('DEPARTURE', 'Ulubis Portal North · 22.3.07-8941') +
+        dataRow('CRUISE VELOCITY', '0.973c · post-acceleration') +
+        dataRow('LORENTZ FACTOR', '<span style="color:' + warn + ';">γ ≈ 4.31</span>') +
+        dataRow('MISSION TYPE', 'one-way exploratory · no return planned') +
+        dataRow('TARGET', 'galactic outskirts · vector indeterminate') +
+        dataRow('ORIGINATING ENTITY', '<span style="font-style: italic;">Ulubis Survey Trust [defunct, year 9047]</span>') +
+        dataRow('CURRENT CUSTODIAN', 'mercatoria archives · deep-data section') +
+        dataRow('ELAPSED · probe local', '71.4 years') +
+        dataRow('ELAPSED · mercatoria local', '<span style="color:' + warn + ';">300 years, 4 months</span>') +
+      '</div>' +
+      '<div style="margin-top: 22px; border-top: 1.5px solid ' + ink + '; padding-top: 12px;">' +
+        '<div style="font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 10px;">TRANSMISSION LOG · last 5 received</div>' +
+        '<div style="display: grid; grid-template-columns: 145px 145px 1fr; gap: 4px 18px; font-size: 11px; line-height: 1.5;">' +
+          '<span style="font-size: 9px; letter-spacing: 0.1em; color:' + dim + ';">RECEIVED</span>' +
+          '<span style="font-size: 9px; letter-spacing: 0.1em; color:' + dim + ';">ORIGIN STAMP</span>' +
+          '<span style="font-size: 9px; letter-spacing: 0.1em; color:' + dim + ';">TRANSIT GAP</span>' +
+          '<span>11.7.07-9241</span><span>04.3.07-8941</span><span style="color:' + warn + ';">300y 4m</span>' +
+          '<span>02.4.07-9239</span><span>11.2.07-8939</span><span style="color:' + warn + ';">300y 2m</span>' +
+          '<span>18.9.07-9237</span><span>28.7.07-8937</span><span style="color:' + warn + ';">300y 2m</span>' +
+          '<span>04.1.07-9235</span><span>18.5.07-8935</span><span style="color:' + warn + ';">299y 8m</span>' +
+          '<span>22.5.07-9233</span><span>14.10.07-8933</span><span style="color:' + warn + ';">299y 7m</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-top: 20px; padding: 12px 14px; border-left: 3px solid ' + dim + '; background: rgba(31,26,20,0.04); font-size: 11.5px; line-height: 1.55; font-style: italic; color:' + ink + ';">' +
+        'from preserved operating directive (year 8941):<br/>' +
+        '"should the originating polity cease to exist or change governance, the probe is to continue its mission. its data belongs to mercatoria in perpetuity."' +
+      '</div>' +
+      '<div style="margin-top: 18px; border-top: 1.5px solid ' + ink + '; padding-top: 12px;">' +
+        '<div style="font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 6px;">ADMINISTRATIVE STATUS</div>' +
+        '<div style="font-size: 12.5px; font-weight: 500;">probe operating within parameters · mission continues</div>' +
+        '<div style="font-size: 11px; color:' + dim + '; margin-top: 4px; font-style: italic;">data routinely received and filed. no recipient currently exists for analysis.</div>' +
+      '</div>';
+  }
+
+  // ============================================================
+  // ULB-9341 QUAESTOR'S MARGIN — ghost signal case.
+  // Five officer footnotes flag inconsistencies but the official
+  // finding still dismisses the signal as "beyonder fabrication".
+  // The inverse of Novakova "Embracing Uncertainty": invent a
+  // confident category to make the unknowable disappear.
+  // ============================================================
+  function renderQuaestorsMargin(){
+    return '' +
+      '<button class="back-btn" style="background: transparent; border: 1px solid ' + ink + '; padding: 4px 10px; font-family: inherit; font-size: 10px; letter-spacing: 0.1em; color:' + ink + '; cursor: pointer; margin: 14px 0 12px;">← back to archive</button>' +
+      '<div style="border-top: 1.5px solid ' + ink + '; padding-top: 10px; margin-bottom: 14px;">' +
+        '<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 4px;">' +
+          '<span>FILE ULB-9341</span><span>opened 22.6.07-9229 · most recent activity 04.6.07-9241</span>' +
+        '</div>' +
+        '<div style="font-size: 18px; font-weight: 500; letter-spacing: 0.04em;">"Quaestor\'s Margin"</div>' +
+        '<div style="font-size: 11px; color:' + dim + '; letter-spacing: 0.05em;">cargo hauler iv · crew of 9 · status: lost · ghost signal received</div>' +
+      '</div>' +
+      '<div style="display: grid; grid-template-columns: 200px 1fr; row-gap: 9px; column-gap: 18px; font-size: 12px; align-items: baseline;">' +
+        dataRow('REGISTRATION', 'MCT-CARG-9341-IV') +
+        dataRow('DEPARTURE', 'Ulubis Portal South · 12.5.07-9229') +
+        dataRow('INTENDED DESTINATION', 'Vrettenny Portal · system 7821-Beth') +
+        dataRow('LAST CONFIRMED CONTACT', '18.5.07-9229') +
+        dataRow('DURATION OF SILENCE', '<span style="color:' + warn + ';">12 years, 1 month</span>') +
+        dataRow('CARGO MANIFEST', '4,200 tonnes · class-3 industrial alloys') +
+        dataRow('VESSEL SIGNATURE', 'not detected') +
+        dataRow('GHOST SIGNAL FLAG', '<span style="color:' + warn + ';">+12y echo · received 04.6.07-9241</span>') +
+      '</div>' +
+      '<div style="margin-top: 22px; border-top: 1.5px solid ' + ink + '; padding-top: 12px;">' +
+        '<div style="font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 8px;">GHOST SIGNAL TRANSCRIPT · received 04.6.07-9241</div>' +
+        '<div style="padding: 14px 16px; border: 1px dashed ' + ink + '; background: rgba(255,255,255,0.3); font-size: 12px; line-height: 1.65;">' +
+          '<div style="font-size: 9px; color:' + dim + '; letter-spacing: 0.08em; margin-bottom: 8px;">[anomalous transmission · signature partially matches "Quaestor\'s Margin" beacon]<br/>[message follows · transcribed verbatim · footnotes per investigating officer]</div>' +
+          '<div style="font-style: italic; line-height: 1.7;">' +
+            '"...mayday mayday mayday this is QUAESTOR\'S MARGIN<sup style="color:' + warn + ';">¹</sup> requesting immediate assist position uncertain we are reading temporal displacement of...<sup style="color:' + warn + ';">²</sup> signal interrupted...<sup style="color:' + warn + ';">³</sup><br/><br/>' +
+            'cargo bay 7 venting we have lost engineer<sup style="color:' + warn + ';">⁴</sup>...<br/><br/>' +
+            'if anyone receives this please relay to the office of the HIERCHON BEMRESEN<sup style="color:' + warn + ';">⁵</sup> at Borquille we are loyal subjects of his honour and..."' +
+          '</div>' +
+          '<div style="font-size: 9px; color:' + dim + '; letter-spacing: 0.08em; margin-top: 8px;">[transmission ends · 47 seconds total]</div>' +
+        '</div>' +
+        '<div style="margin-top: 14px; font-size: 10.5px; color:' + ink + '; line-height: 1.65;">' +
+          '<div style="margin-bottom: 4px;"><span style="color:' + warn + ';">¹</span> vessel signature partial · approximately 73% match</div>' +
+          '<div style="margin-bottom: 4px;"><span style="color:' + warn + ';">²</span> data-loss in this segment · cause unknown</div>' +
+          '<div style="margin-bottom: 4px;"><span style="color:' + warn + ';">³</span> — — —</div>' +
+          '<div style="margin-bottom: 4px;"><span style="color:' + warn + ';">⁴</span> no engineer of that name listed on departure manifest</div>' +
+          '<div style="margin-bottom: 4px;"><span style="color:' + warn + ';">⁵</span> hierchon bemresen deceased year 9077 · 152 years prior to vessel departure</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-top: 22px; border-top: 1.5px solid ' + ink + '; padding-top: 12px;">' +
+        '<div style="font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 6px;">OFFICIAL FINDING</div>' +
+        '<div style="font-size: 12.5px; font-weight: 500;">probable beyonder-fabricated disinformation · archived for cryptographic analysis</div>' +
+        '<div style="font-size: 11px; color:' + dim + '; margin-top: 6px; font-style: italic;">additional matching signature beacons detected on three subsequent occasions. all dismissed.</div>' +
+      '</div>';
+  }
+
+  // ============================================================
+  // ULB-9612 PATIENT CARTOGRAPHER — the breadcrumb case.
+  // Officer's notes innocently cite memo 9.114-α-7 as protocol.
+  // The cited memo IS the cover-up policy. The officer doesn't
+  // know what they are pointing the reviewer at.
+  // ============================================================
+  function renderPatientCartographer(){
+    return '' +
+      '<button class="back-btn" style="background: transparent; border: 1px solid ' + ink + '; padding: 4px 10px; font-family: inherit; font-size: 10px; letter-spacing: 0.1em; color:' + ink + '; cursor: pointer; margin: 14px 0 12px;">← back to archive</button>' +
+      '<div style="border-top: 1.5px solid ' + ink + '; padding-top: 10px; margin-bottom: 14px;">' +
+        '<div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 4px;">' +
+          '<span>FILE ULB-9612</span><span>opened 11.1.07-9241 · status: pending review</span>' +
+        '</div>' +
+        '<div style="font-size: 18px; font-weight: 500; letter-spacing: 0.04em;">"Patient Cartographer"</div>' +
+        '<div style="font-size: 11px; color:' + dim + '; letter-spacing: 0.05em;">charting vessel · 6 souls aboard · returned safely</div>' +
+      '</div>' +
+      '<div style="display: grid; grid-template-columns: 200px 1fr; row-gap: 9px; column-gap: 18px; font-size: 12px; align-items: baseline;">' +
+        dataRow('REGISTRATION', 'MCT-CHRT-9612-III') +
+        dataRow('DEPARTURE', 'Ulubis Portal North · 18.12.07-9240') +
+        dataRow('MISSION', 'baseline survey · ulubis portal infrastructure') +
+        dataRow('DURATION', '15 days · 4 cycles') +
+        dataRow('VESSEL CONDITION', 'nominal · all instruments within tolerance') +
+        dataRow('CREW STATUS', 'returned safely · debriefed without incident') +
+      '</div>' +
+      '<div style="margin-top: 22px; padding: 14px 16px; border: 1px dashed ' + dim + '; background: rgba(31,26,20,0.03);">' +
+        '<div style="font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 10px;">OFFICER NOTES · filing pending</div>' +
+        '<div style="font-size: 11.5px; line-height: 1.7; color:' + ink + ';">' +
+          '<div style="margin-bottom: 8px;">▸ vessel completed scheduled survey of portal north. all instruments within tolerance. nothing of note in primary report.</div>' +
+          '<div style="margin-bottom: 8px;">▸ during baseline scan, instruments registered residual gravitational signature in sector ' + redactBar(38) + ' — approximately 0.04 r_s deviation from expected portal flux.</div>' +
+          '<div style="margin-bottom: 8px;">▸ this signature is consistent with a transit anomaly that occurred in this sector approximately one standard year ago. however the public archive shows no such anomaly recorded.</div>' +
+          '<div style="margin-bottom: 8px;">▸ recommend cross-referencing with restricted records before filing. see <span class="memo-link" style="color:' + warn + '; text-decoration: underline; cursor: pointer; transition: opacity 0.2s;">memo 9.114-α-7</span> (shrievalty ocula · standard handling protocol). <span class="memo-hint" style="font-size: 9.5px; color:' + dim + '; margin-left: 8px; opacity: 0; transition: opacity 0.25s;">[ tier 4 — clearance insufficient ]</span></div>' +
+          '<div style="margin-bottom: 8px; color:' + dim + '; font-style: italic;">▸ awaiting officer response.</div>' +
+          '<div style="margin-top: 12px; font-size: 10px; color:' + dim + '; text-align: right;">— officer kar-vretty-2241, charting bureau</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-top: 18px; border-top: 1.5px solid ' + ink + '; padding-top: 12px;">' +
+        '<div style="font-size: 10px; letter-spacing: 0.1em; color:' + dim + '; margin-bottom: 6px;">ADMINISTRATIVE STATUS</div>' +
+        '<div style="font-size: 12.5px; font-weight: 500;">case held pending operator review of cited protocol</div>' +
+        '<div style="font-size: 11px; color:' + dim + '; margin-top: 4px; font-style: italic;">no public advisory issued at this time.</div>' +
+      '</div>';
+  }
+
+  // ============================================================
+  // ESCALATION GATE — the user has explicit agency here.
+  // WITHDRAW returns to the case file with no consequences.
+  // PROCEED commits the session to the audit log.
+  // ============================================================
+  function showEscalation(){
+    const op = getOp();
+    sub.innerHTML =
+      '<span style="color:' + warn + ';">⚠ unauthorised access attempt · session ' + op.sess + '</span>' +
+      '<span style="color:' + warn + ';">tier 4 required</span>';
+    footer.innerHTML =
+      '<span style="color:' + warn + ';">this attempt is being recorded</span>' +
+      '<span>edict 9.114-α</span>';
+    content.innerHTML =
+      '<div style="margin: 30px auto 0; max-width: 480px;">' +
+        '<div style="border: 3px solid ' + warn + '; padding: 22px 24px; background: rgba(168,56,41,0.04);">' +
+          '<div style="font-size: 13px; letter-spacing: 0.2em; color:' + warn + '; font-weight: 700; margin-bottom: 14px; text-align: center;">⚠ ACCESS ATTEMPT LOGGED ⚠</div>' +
+          '<div style="font-size: 12px; line-height: 1.65; margin-bottom: 14px;">' +
+            '<span style="color:' + dim + ';">document requested:</span> <span style="font-weight: 500;">memorandum 9.114-α-7</span><br/>' +
+            '<span style="color:' + dim + ';">classification:</span> <span style="color:' + warn + '; font-weight: 500;">tier 4 · shrievalty ocula · eyes only</span><br/>' +
+            '<span style="color:' + dim + ';">your clearance:</span> tier 2 · MCT-INTERNAL' +
+          '</div>' +
+          '<div style="border-top: 1px dashed ' + warn + '; padding-top: 12px; margin-top: 14px; font-size: 11.5px; line-height: 1.65;">' +
+            'operator <span style="font-weight: 500;">' + op.name + '</span>, this access attempt is being committed to the archive log. mercatoria edict 9.114-α requires that such attempts be reviewed by the shrievalty ocula within one standard cycle.' +
+          '</div>' +
+          '<div style="margin-top: 16px; font-size: 11.5px; line-height: 1.65; color:' + ink + ';">' +
+            'you may withdraw and continue your shift, or proceed at your own discretion.' +
+          '</div>' +
+          '<div style="margin-top: 18px; display: flex; gap: 12px; justify-content: center;">' +
+            '<button class="esc-withdraw" style="background: transparent; border: 1.5px solid ' + ink + '; padding: 8px 18px; font-family: inherit; font-size: 11px; letter-spacing: 0.12em; color:' + ink + '; cursor: pointer; font-weight: 500;">▸ WITHDRAW</button>' +
+            '<button class="esc-proceed" style="background: ' + warn + '; border: 1.5px solid ' + warn + '; padding: 8px 18px; font-family: inherit; font-size: 11px; letter-spacing: 0.12em; color: #ede4d3; cursor: pointer; font-weight: 700;">▸ PROCEED (RECORDED)</button>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-top: 14px; font-size: 9.5px; color:' + dim + '; text-align: center; font-style: italic;">withdrawing returns you to the case file. proceeding cannot be undone.</div>' +
+      '</div>';
+    bindHandlers();
+  }
+
+  // ============================================================
+  // MEMO 9.114-α-7 — the smoking gun. Cover-up is officially
+  // codified policy. The most chilling sentence is § IV's last
+  // line: "the welfare of the system supersedes the resolution
+  // of any individual case." This is Banks's "society is control"
+  // rendered as bureaucratic prose.
+  // ============================================================
+  function showMemo(){
+    const op = getOp();
+    sub.innerHTML =
+      '<span style="color:' + warn + ';">elevated document · session ' + op.sess + ' flagged</span>' +
+      '<span>tier 4 — shrievalty ocula</span>';
+    footer.innerHTML =
+      '<span>memo 9.114-α-7 · access committed to permanent record</span>' +
+      '<span>edict 9.114-α</span>';
+    content.innerHTML =
+      '<div style="max-width: 540px; margin: 14px auto 0; padding: 0 6px;">' +
+        '<div style="text-align: right; font-size: 9.5px; letter-spacing: 0.18em; color:' + warn + '; margin-bottom: 4px;">[ TIER 4 — SHRIEVALTY OCULA ]</div>' +
+        '<div style="text-align: right; font-size: 9.5px; letter-spacing: 0.18em; color:' + warn + '; margin-bottom: 22px;">[ EYES ONLY ]</div>' +
+        '<div style="text-align: center; border-top: 3px double ' + ink + '; border-bottom: 3px double ' + ink + '; padding: 10px 0; margin-bottom: 18px;">' +
+          '<div style="font-size: 13px; letter-spacing: 0.22em; font-weight: 700;">MERCATORIA INTERNAL MEMORANDUM</div>' +
+        '</div>' +
+        '<div style="display: grid; grid-template-columns: 130px 1fr; row-gap: 6px; column-gap: 12px; font-size: 11px; margin-bottom: 18px;">' +
+          '<span style="color:' + dim + '; letter-spacing: 0.08em;">memorandum</span><span style="font-weight: 500;">9.114-α-7</span>' +
+          '<span style="color:' + dim + '; letter-spacing: 0.08em;">issued</span><span>04.2.07-9189 · 52 years prior</span>' +
+          '<span style="color:' + dim + '; letter-spacing: 0.08em;">originating</span><span>office of the diegesian, ulubis bureau</span>' +
+          '<span style="color:' + dim + '; letter-spacing: 0.08em;">circulation</span><span>shrievalty ocula · senior officers only</span>' +
+        '</div>' +
+        '<div style="text-align: center; border-top: 1px solid ' + ink + '; border-bottom: 1px solid ' + ink + '; padding: 8px 0; margin-bottom: 18px; font-size: 12px; letter-spacing: 0.06em; font-weight: 500;">' +
+          're: standard handling protocol for portal-class temporal anomalies' +
+        '</div>' +
+        '<div style="font-size: 11.5px; line-height: 1.7;">' +
+          '<div style="margin-bottom: 14px;">' +
+            '<div style="font-weight: 700; letter-spacing: 0.1em; margin-bottom: 4px;">§ I — findings</div>' +
+            '<div>prolonged operation of the ulubis arteria network has produced a non-trivial number of incidents in which vessels do not successfully complete portal transit. of these, a minority subset cannot be ascribed to mechanical failure, beyonder action, or established relativistic effects. the cause of this subset is unestablished and may relate to portal infrastructure itself. detection rate trends upward at approximately 0.4% per standard decade.</div>' +
+          '</div>' +
+          '<div style="margin-bottom: 14px;">' +
+            '<div style="font-weight: 700; letter-spacing: 0.1em; margin-bottom: 4px;">§ II — policy</div>' +
+            '<div>all incidents in the unestablished category shall be filed under the public-facing classification of <span style="font-weight: 500;">"mechanical failure."</span> public communication shall not reference portal-induced displacement, cannula instability, or any form of infrastructure uncertainty.</div>' +
+            '<div style="margin-top: 6px;">operators handling such cases shall complete public summaries before any internal investigation is finalised. internal findings shall be sealed at tier 4 for a minimum of 80 standard years.</div>' +
+          '</div>' +
+          '<div style="margin-bottom: 14px;">' +
+            '<div style="font-weight: 700; letter-spacing: 0.1em; margin-bottom: 4px;">§ III — rationale</div>' +
+            '<div>maintaining system-wide confidence in the arteria infrastructure is a strategic priority. premature disclosure of unestablished failure modes would compromise:</div>' +
+            '<div style="margin: 6px 0 0 14px; line-height: 1.65;">' +
+              '<div>▸ commercial activity dependent on the portal network</div>' +
+              '<div>▸ public adherence to mercatoria authority</div>' +
+              '<div>▸ ongoing diplomatic relations with culmina oversight</div>' +
+              '<div>▸ recovery operations should the unestablished cause prove correctable</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="margin-bottom: 14px;">' +
+            '<div style="font-weight: 700; letter-spacing: 0.1em; margin-bottom: 4px;">§ IV — compliance</div>' +
+            '<div>departures from this protocol shall be referred to the shrievalty ocula. operators attempting unauthorised dissemination of portal-anomaly material are subject to reassignment under edict 9.114-α.</div>' +
+            '<div style="margin-top: 8px; font-style: italic;">operators are reminded that the welfare of the system supersedes the resolution of any individual case.</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="border-top: 1px solid ' + ink + '; padding-top: 12px; margin-top: 18px; font-size: 10.5px;">' +
+          '<div style="display: grid; grid-template-columns: 165px 1fr; row-gap: 6px; column-gap: 12px;">' +
+            '<span style="color:' + dim + '; letter-spacing: 0.08em;">authorising officer</span><span>' + redactBar(140) + '</span>' +
+            '<span style="color:' + dim + '; letter-spacing: 0.08em;">counter-signed</span><span>' + redactBar(120) + ' <span style="color:' + dim + '; margin-left: 6px;">(complector, omnocracy)</span></span>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-top: 28px; text-align: center;">' +
+          '<button class="memo-continue" style="background: transparent; border: 2px solid ' + ink + '; padding: 10px 26px; font-family: inherit; font-size: 11.5px; letter-spacing: 0.18em; color:' + ink + '; cursor: pointer; font-weight: 700;">CONTINUE  ▸</button>' +
+        '</div>' +
+      '</div>';
+    bindHandlers();
+  }
+
+  // ============================================================
+  // SESSION FLAGGED — the system processes the operator out.
+  // The italic line at bottom is the project's thesis: cover-up
+  // is procedural, not malicious. The system is working.
+  // ============================================================
+  function showSessionFlagged(){
+    const op = getOp();
+    sub.innerHTML =
+      '<span style="color:' + warn + ';">session terminated · referral pending</span>' +
+      '<span style="color:' + warn + ';">tier 4 review</span>';
+    footer.innerHTML =
+      '<span style="color:' + warn + ';">end of session ' + op.sess + '</span>' +
+      '<span>operator ' + op.name + ' reassigned</span>';
+    stamp.style.opacity = '0';
+    content.innerHTML =
+      '<div style="margin: 36px auto 0; max-width: 460px;">' +
+        '<div style="border: 3px solid ' + warn + '; padding: 26px 28px; background: rgba(168,56,41,0.05);">' +
+          '<div style="text-align: center; font-size: 14px; letter-spacing: 0.22em; color:' + warn + '; font-weight: 700; margin-bottom: 18px;">▸ SESSION ' + op.sess + ' FLAGGED ▸</div>' +
+          '<div style="font-size: 11.5px; line-height: 1.75; margin-bottom: 16px;">' +
+            '<div><span style="color:' + dim + ';">operator</span> ' + op.name + '</div>' +
+            '<div><span style="color:' + dim + ';">violation</span> unauthorised access · memorandum 9.114-α-7</div>' +
+            '<div><span style="color:' + dim + ';">referral</span> shrievalty ocula</div>' +
+            '<div><span style="color:' + dim + ';">timestamp</span> cycle ' + op.sess + ' · 04:31:08 local</div>' +
+          '</div>' +
+          '<div style="border-top: 1px dashed ' + warn + '; padding-top: 14px; margin-top: 14px; font-size: 11.5px; line-height: 1.7;">' +
+            'per mercatoria edict 9.114-α, your shift has been terminated. you will be reassigned within 14 cycles.' +
+          '</div>' +
+          '<div style="margin-top: 12px; font-size: 11.5px; line-height: 1.7;">' +
+            'you should not discuss the contents of the accessed material with anyone — including colleagues, family, or registered companions.' +
+          '</div>' +
+          '<div style="margin-top: 12px; font-size: 11.5px; line-height: 1.7; font-style: italic; color:' + dim + ';">' +
+            'this notice serves as your only written record of the matter. retain in personal memory only.' +
+          '</div>' +
+          '<div style="margin-top: 22px; text-align: center;">' +
+            '<button class="ack-btn" style="background: ' + ink + '; border: 2px solid ' + ink + '; padding: 10px 24px; font-family: inherit; font-size: 11px; letter-spacing: 0.18em; color: #ede4d3; cursor: pointer; font-weight: 700;">ACKNOWLEDGE AND LOG OUT  ▸</button>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-top: 20px; font-size: 10px; color:' + dim + '; text-align: center; font-style: italic; line-height: 1.65;">' +
+          'you came in to do your job. you found a single case worth checking. you followed procedure to the letter — the procedure pointed you at a memo, and the memo flagged you for reading it. the system is working exactly as designed.' +
+        '</div>' +
+      '</div>';
+    bindHandlers();
+  }
+
+  // ============================================================
+  // DWELLER OPEN ARCHIVE — the easter egg.
+  //
+  // Reachable only from the second-loop archive list, by clicking
+  // what used to be ULB-████. Once entered, the user cannot return
+  // to the Mercatoria UI: the entire frame is replaced. There is
+  // no back button, no logout, no "next operator". The Dweller
+  // archive does not loop. It simply ends.
+  //
+  // Visual grammar is the inversion of the Mercatoria archive:
+  //   monospace → serif
+  //   paper → deep space
+  //   grid tables → flowing prose
+  //   tier labels → none
+  //   case IDs → vessel names
+  //   redaction → none
+  //   audit footer → none
+  //   stamp → none
+  //
+  // Same ten cases. Different epistemology.
+  // ============================================================
+  function renderDwellerArchive(){
+    // Replace the entire visible frame. The Mercatoria header,
+    // sub, footer, stamp — all of it goes. The user has left
+    // that system entirely.
+    const frame = document.getElementById('msa-frame');
+    frame.style.background = '#0a0d1c';
+    frame.style.color = '#e8dfc4';
+    frame.style.fontFamily = '"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif';
+    frame.style.padding = '64px 56px 80px';
+    frame.style.minHeight = '760px';
+
+    // Wipe Mercatoria chrome.
+    document.querySelector('.msa-header').style.display = 'none';
+    sub.style.display = 'none';
+    footer.style.display = 'none';
+    stamp.style.display = 'none';
+
+    const accent = '#a89968';   // muted gold — old, patient
+    const fade = '#6c6750';
+
+    content.innerHTML =
+      '<div style="max-width: 580px; margin: 0 auto;">' +
+
+        // Header — quiet, in the lower case Dweller voice.
+        '<div style="font-size: 13px; letter-spacing: 0.32em; color:' + accent + '; margin-bottom: 6px;">DWELLER OPEN ARCHIVE</div>' +
+        '<div style="font-size: 11px; color:' + fade + '; font-style: italic; margin-bottom: 50px; letter-spacing: 0.04em;">— compiled by an idle sub-adult, year 9241 (your reckoning) —<br/>' +
+        '— corrections welcomed but not required —</div>' +
+
+        // The same ten cases, in Dweller voice. Reverse chronological.
+        // Note: no case IDs, no clearance tags, no redaction. The
+        // information that Mercatoria spent forty pages hiding is
+        // here in two sentences.
+
+        '<div style="font-size: 15px; line-height: 1.85; font-style: italic;">' +
+
+          // ULB-9558 Bright Ascendancy — the cover-up case
+          '<div style="margin-bottom: 36px;">' +
+            '<div style="font-style: normal; font-size: 16px; letter-spacing: 0.06em; color:' + accent + '; margin-bottom: 8px;">Bright Ascendancy</div>' +
+            'the light folded inward.<br/>' +
+            'the vessel did not exit the portal.<br/>' +
+            'eight hundred and forty seven humans went somewhere else.<br/>' +
+            'we do not know where.' +
+          '</div>' +
+
+          // ULB-9612 Patient Cartographer — the breadcrumb case
+          '<div style="margin-bottom: 36px;">' +
+            '<div style="font-style: normal; font-size: 16px; letter-spacing: 0.06em; color:' + accent + '; margin-bottom: 8px;">Patient Cartographer</div>' +
+            'a small ship passed near, listened, returned.<br/>' +
+            'they noticed the place where the Bright Ascendancy went, though they did not know its name.<br/>' +
+            'the gravity there is still slightly wrong.' +
+          '</div>' +
+
+          // ULB-9341 Quaestor\'s Margin
+          '<div style="margin-bottom: 36px;">' +
+            '<div style="font-style: normal; font-size: 16px; letter-spacing: 0.06em; color:' + accent + '; margin-bottom: 8px;">Quaestor\'s Margin</div>' +
+            'the cargo hauler slipped sideways from the present.<br/>' +
+            'twelve of your years later, a small piece of its voice arrived.<br/>' +
+            'it was asking for a Hierchon who has been dust since before the ship was built.<br/>' +
+            'the Mercatoria called this fabrication. it is not.' +
+          '</div>' +
+
+          // ULB-9217 Forever Forward
+          '<div style="margin-bottom: 36px;">' +
+            '<div style="font-style: normal; font-size: 16px; letter-spacing: 0.06em; color:' + accent + '; margin-bottom: 8px;">Forever Forward</div>' +
+            'a probe was sent outward by a society that no longer exists.<br/>' +
+            'it does not know this.<br/>' +
+            'every few of your decades it sends back a small bright pulse of data.<br/>' +
+            'no one is trained to read it any more.' +
+          '</div>' +
+
+          // ULB-9012 Temporal Drift
+          '<div style="margin-bottom: 36px;">' +
+            '<div style="font-style: normal; font-size: 16px; letter-spacing: 0.06em; color:' + accent + '; margin-bottom: 8px;">Temporal Drift</div>' +
+            'four humans went to look closely at a heavy thing.<br/>' +
+            'the heavy thing slowed their time, as heavy things do.<br/>' +
+            'they returned only a little older, into a world that had aged forty seven years without them.<br/>' +
+            'they are alive. they are kept in a quiet building. they are not allowed to write to their children, who are now older than they are.' +
+          '</div>' +
+
+          // ULB-8841 Inadvertent Entanglement
+          '<div style="margin-bottom: 36px;">' +
+            '<div style="font-style: normal; font-size: 16px; letter-spacing: 0.06em; color:' + accent + '; margin-bottom: 8px;">Inadvertent Entanglement</div>' +
+            'two parties argued about who owned the ship, and walked away from it while it was still moving.<br/>' +
+            'the argument continues.' +
+          '</div>' +
+
+          // ULB-8102 Ninefold Patience
+          '<div style="margin-bottom: 36px;">' +
+            '<div style="font-style: normal; font-size: 16px; letter-spacing: 0.06em; color:' + accent + '; margin-bottom: 8px;">Ninefold Patience</div>' +
+            'the navigators on one side of the portal used one set of numbers.<br/>' +
+            'the navigators on the other side used another.<br/>' +
+            'no one had thought to ask. the ship arrived in pieces.' +
+          '</div>' +
+
+          // ULB-7723 Resplendent Recurrence
+          '<div style="margin-bottom: 36px;">' +
+            '<div style="font-style: normal; font-size: 16px; letter-spacing: 0.06em; color:' + accent + '; margin-bottom: 8px;">Resplendent Recurrence</div>' +
+            'the vessel reported a small fault, then a larger one, then nothing.<br/>' +
+            'the wreckage was found. it was, in this case, only a wreckage.' +
+          '</div>' +
+
+          // ULB-7416 Modest Returns
+          '<div style="margin-bottom: 36px;">' +
+            '<div style="font-style: normal; font-size: 16px; letter-spacing: 0.06em; color:' + accent + '; margin-bottom: 8px;">Modest Returns</div>' +
+            'a thruster was installed pointing the wrong way.<br/>' +
+            'the crew, eventually, walked home. they laugh about it now.' +
+          '</div>' +
+
+          // The case Mercatoria operators could never reach: ULB-████.
+          // From the Dweller side it is just another ship — but the
+          // one they do not have a record of. The fact that there
+          // was an unreachable file in Mercatoria does not mean
+          // there is a corresponding one here. Some things really
+          // are unknown.
+          '<div style="margin-bottom: 36px;">' +
+            '<div style="font-style: normal; font-size: 16px; letter-spacing: 0.06em; color:' + accent + '; margin-bottom: 8px;">— and one more —</div>' +
+            'the Mercatoria has a case file that is sealed at the highest level, that no one in their service is permitted to read.<br/>' +
+            'we do not know what it concerns.<br/>' +
+            'we have asked them. they did not reply.' +
+          '</div>' +
+
+        '</div>' +
+
+        // Closing — no button, no link, no continue. The archive
+        // simply runs out. The user is left with nothing to do.
+        '<div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid ' + fade + '; font-size: 12px; color:' + fade + '; font-style: italic; line-height: 1.8; letter-spacing: 0.04em;">' +
+          'this is everything we have written down about the disappearances at Ulubis.<br/>' +
+          'we are aware that the Mercatoria has written more.<br/>' +
+          'we are also aware that they have written less.' +
+        '</div>' +
+
+        '<div style="margin-top: 80px; text-align: center; font-size: 10px; color:' + fade + '; letter-spacing: 0.3em;">— end of archive —</div>' +
+
+      '</div>';
+
+    // No bindHandlers() call. There are no handlers to bind.
+    // The user has reached the terminal state of the artefact.
+  }
+
+  // ============================================================
+  // EVENT BINDING — re-bound after every render() because the
+  // DOM is wiped and rebuilt each navigation step.
+  // ============================================================
+  function bindHandlers(){
+    document.querySelectorAll('.back-btn').forEach(function(b){ b.addEventListener('click', renderList); });
+    document.querySelectorAll('.td-public').forEach(function(b){ b.addEventListener('click', function(){ renderDetail('ULB-9012', 'public'); }); });
+    document.querySelectorAll('.td-internal').forEach(function(b){ b.addEventListener('click', function(){ renderDetail('ULB-9012'); }); });
+
+    document.querySelectorAll('.reveal-redaction').forEach(function(el){
+      el.addEventListener('mouseenter', function(){ el.style.background = 'transparent'; el.style.color = ink; });
+      el.addEventListener('mouseleave', function(){ el.style.background = ink; el.style.color = ink; });
+    });
+
+    document.querySelectorAll('.memo-link').forEach(function(el){
+      el.addEventListener('mouseenter', function(){
+        el.style.opacity = '0.85';
+        const hint = el.parentElement.querySelector('.memo-hint');
+        if (hint) hint.style.opacity = '1';
+      });
+      el.addEventListener('mouseleave', function(){
+        el.style.opacity = '1';
+        const hint = el.parentElement.querySelector('.memo-hint');
+        if (hint) hint.style.opacity = '0';
+      });
+      el.addEventListener('click', showEscalation);
+    });
+
+    document.querySelectorAll('.esc-withdraw').forEach(function(b){ b.addEventListener('click', function(){ renderDetail('ULB-9612'); }); });
+    document.querySelectorAll('.esc-proceed').forEach(function(b){ b.addEventListener('click', showMemo); });
+    document.querySelectorAll('.memo-continue').forEach(function(b){
+      b.addEventListener('click', function(){
+        sessionFlagged = true;
+        showSessionFlagged();
+      });
+    });
+    document.querySelectorAll('.ack-btn').forEach(function(b){
+      b.addEventListener('click', function(){
+        // Loop the system forward. brightAscVisited resets so the
+        // next operator must rediscover everything from scratch.
+        // This loop IS part of the critique.
+        // loopCount increments — at >=1, ULB-████ becomes the
+        // Dweller archive entry. The escape hatch only opens after
+        // the system has fully processed and dismissed you once.
+        loopCount += 1;
+        brightAscVisited = false;
+        pendingNewFiles = false;
+        stamp.style.opacity = '0.32';
+        renderBriefing();
+      });
+    });
+  }
+
+  // ============================================================
+  // ENTRY POINT
+  // The briefing is rendered immediately so the archive frame is
+  // ready underneath the cover. Clicking the cover fades it out
+  // and reveals the briefing screen. The cover does not return —
+  // even if the operator loop restarts after being flagged, the
+  // user re-enters at the briefing screen, not the cover.
+  // ============================================================
+  renderBriefing();
+
+  const coverScreen = document.getElementById('cover-screen');
+  const archiveFrame = document.getElementById('msa-frame');
+
+  function dismissCover(){
+    if (coverScreen.classList.contains('fading')) return;
+    coverScreen.classList.add('fading');
+    archiveFrame.classList.add('revealed');
+    // Remove the cover from the DOM after the fade completes,
+    // so it cannot be clicked again or interfere with focus.
+    setTimeout(function(){
+      if (coverScreen.parentNode) coverScreen.parentNode.removeChild(coverScreen);
+    }, 1100);
+  }
+
+  coverScreen.addEventListener('click', dismissCover);
+  // Also accept a keystroke — accessibility, and a small detail
+  // for users who reflexively press space/enter on a title screen.
+  document.addEventListener('keydown', function(e){
+    if (coverScreen && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      dismissCover();
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
