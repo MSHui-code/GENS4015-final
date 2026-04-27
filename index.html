@@ -142,23 +142,32 @@
 
   #cover-prompt {
     position: fixed;
-    bottom: 30px;
+    bottom: 48px;
     left: 0;
     right: 0;
     text-align: center;
-    color: #c8b88a;
+    color: #ede4d3;
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    font-size: 11px;
+    font-size: 14px;
+    font-weight: 700;
     letter-spacing: 0.32em;
     text-transform: uppercase;
     opacity: 0;
-    animation: coverPromptBlink 2.4s ease-in-out 1.2s infinite;
+    animation: coverPromptBlink 2.4s ease-in-out 1.0s infinite;
     pointer-events: none;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    text-shadow: 0 1px 6px rgba(0,0,0,0.9), 0 0 12px rgba(0,0,0,0.6);
+  }
+
+  #cover-prompt span {
+    display: inline-block;
+    padding: 9px 22px;
+    border: 1.5px solid #ede4d3;
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(2px);
   }
 
   @keyframes coverPromptBlink {
-    0%, 100% { opacity: 0.4; }
+    0%, 100% { opacity: 0.65; }
     50%      { opacity: 1; }
   }
 
@@ -174,7 +183,7 @@
 
 <div id="cover-screen">
   <img id="cover-image" src="cover.jpg" alt="Mercatoria Arteria Network — Ulubis North Portal classified schematic" />
-  <div id="cover-prompt">▸ click to access archive</div>
+  <div id="cover-prompt"><span>▸ ENTER ARCHIVE</span></div>
 </div>
 
 <div id="msa-frame">
